@@ -1,0 +1,33 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(KURSACH LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System Audio)
+
+add_library(game
+    src/game.cpp
+    src/mainMenu.cpp
+    src/options.cpp
+    src/audioManager.cpp
+)
+
+target_include_directories(game PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(game PUBLIC
+    SFML::Graphics
+    SFML::Window
+    SFML::System
+    SFML::Audio
+)
+
+add_executable(deepdungeon
+    src/main.cpp
+)
+
+target_link_libraries(deepdungeon PRIVATE game)
