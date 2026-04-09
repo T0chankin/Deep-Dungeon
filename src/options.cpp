@@ -28,8 +28,11 @@ void Options::updateLabels() {
     musicLabel.setString("Music volume:  " + std::to_string((int)audio.getMusicVolume()));
     soundLabel.setString("Sound volume:  " + std::to_string((int)audio.getSoundVolume()));
 
-    musicLabel.setFillColor(sf::Color(255, 215, 0));
-    soundLabel.setFillColor(sf::Color(180, 180, 180));
+    musicLabel.setFillColor(selected == 0 ? sf::Color(255, 215, 0) : sf::Color(180, 180, 180));
+    soundLabel.setFillColor(selected == 1 ? sf::Color(255, 215, 0) : sf::Color(180, 180, 180));
+
+    musicLabel.setStyle(selected == 0 ? sf::Text::Bold : sf::Text::Regular);
+    soundLabel.setStyle(selected == 1 ? sf::Text::Bold : sf::Text::Regular);
 
     auto mb = musicLabel.getLocalBounds();
     musicLabel.setOrigin({mb.size.x / 2.f, mb.size.y / 2.f});
@@ -42,19 +45,31 @@ void Options::updateLabels() {
 
 void Options::handleEvent(const sf::Event& event, bool& goBack) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
-        if (key->code == sf::Keyboard::Key::Escape) {
+        if (key->code == sf::Keyboard::Key::Escape)
             goBack = true;
-        }
+
+        if (key->code == sf::Keyboard::Key::Up)
+            selected = (selected - 1 + 2) % 2;  
+
+        if (key->code == sf::Keyboard::Key::Down)
+            selected = (selected + 1) % 2;
+
         if (key->code == sf::Keyboard::Key::Left) {
-            audio.setMusicVolume(std::max(0.f, audio.getMusicVolume() - 5.f));
-            updateLabels();
+            if (selected == 0)
+                audio.setMusicVolume(std::max(0.f, audio.getMusicVolume() - 5.f));
+            else
+                audio.setSoundVolume(std::max(0.f, audio.getSoundVolume() - 5.f));
         }
+
         if (key->code == sf::Keyboard::Key::Right) {
-            audio.setMusicVolume(std::min(100.f, audio.getMusicVolume() + 5.f));
-            updateLabels();
+            if (selected == 0)
+                audio.setMusicVolume(std::min(100.f, audio.getMusicVolume() + 5.f));
+            else
+                audio.setSoundVolume(std::min(100.f, audio.getSoundVolume() + 5.f));
         }
+
+        updateLabels();
     }
-    updateLabels();
 }
 
 void Options::draw() {

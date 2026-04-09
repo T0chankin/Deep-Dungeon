@@ -20,5 +20,7 @@ private:
     sf::Text musicLabel;
     sf::Text soundLabel;
 
+    int selected=0;
+
     void updateLabels();
 };
