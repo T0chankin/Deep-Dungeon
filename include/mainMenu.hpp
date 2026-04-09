@@ -9,7 +9,8 @@ enum class MenuResult {
     NewGame,
     LoadGame,
     Options,
-    Exit };
+    Exit 
+    };
 
 class MainMenu {
 public:

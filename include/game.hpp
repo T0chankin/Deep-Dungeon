@@ -2,12 +2,10 @@
 #include <SFML/Graphics.hpp>
 #include "mainMenu.hpp"
 #include "options.hpp"
+#include "audioManager.hpp"
+#include "dungeon.hpp"
 
-enum class GameState {
-    Menu,
-    Options,
-    Playing
-};
+enum class GameState { Menu, Options, Playing };
 
 class Game {
 public:
@@ -25,4 +23,5 @@ private:
     MainMenu* menu;
     Options* options;
     AudioManager* audio;
+    Dungeon* dungeon;  // <-- новое
 };

@@ -17,6 +17,7 @@ Game::Game()
     audio = new AudioManager();
     menu    = new MainMenu(window, font, *audio);
     options = new Options(window, font, *audio);
+    dungeon = new Dungeon(window, font);
     audio->playMenuMusic();
 }
 
@@ -37,8 +38,10 @@ void Game::handleEvents() {
 
         if (state == GameState::Menu) {
             MenuResult result = menu->handleEvent(*event);
-            if (result == MenuResult::NewGame)
+            if (result == MenuResult::NewGame){
                 state = GameState::Playing;
+                audio->playGameMusic();
+            }
             if (result == MenuResult::Options)
                 state = GameState::Options;
             if (result == MenuResult::Exit)
@@ -51,10 +54,23 @@ void Game::handleEvents() {
             if (goBack)
                 state = GameState::Menu;
         }
+
+        if (state == GameState::Playing) {
+            dungeon->handleEvent(*event);
+
+            if (const auto* key = event->getIf<sf::Event::KeyPressed>())
+                if (key->code == sf::Keyboard::Key::Escape) {
+                    state = GameState::Menu;
+                    audio->playMenuMusic();
+                }
+        }
     }
 }
 
-void Game::update(float dt) {}
+void Game::update(float dt) {
+    if (state == GameState::Playing)
+        dungeon->update(dt);
+}
 
 void Game::render() {
     window.clear(sf::Color::Black);
@@ -63,6 +79,8 @@ void Game::render() {
         menu->draw();
     else if (state == GameState::Options)
         options->draw();
+    else if (state == GameState::Playing)
+        dungeon->draw();
 
     window.display();
 }

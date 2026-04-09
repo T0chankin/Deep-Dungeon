@@ -13,6 +13,8 @@ add_library(game
     src/mainMenu.cpp
     src/options.cpp
     src/audioManager.cpp
+    src/player.cpp
+    src/dungeon.cpp
 )
 
 target_include_directories(game PUBLIC
