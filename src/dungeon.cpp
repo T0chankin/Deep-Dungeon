@@ -91,51 +91,43 @@ void Dungeon::updateCamera(float dt) {
 }
 
 void Dungeon::update(float dt) {
-    std::cout << "handleInput\n";
     handleInput(dt);
-    std::cout << "player.update\n";
     player.update(dt);
-    std::cout << "resolveCollision\n";
+
     sf::Vector2f pos = player.getPos();
     resolveCollision(pos);
     player.setPos(pos);
-    std::cout << "handleAttack\n";
+
     handleAttack();
-    std::cout << "handleProjectiles\n";
     handleProjectiles(dt);
 
     if (attackVisualTimer > 0.f)
         attackVisualTimer -= dt;
 
-    std::cout << "checkItemPickup\n";
     checkItemPickup();
-    std::cout << "updateCamera\n";
     updateCamera(dt);
-    std::cout << "checkHatch\n";
     checkHatch();
-    std::cout << "hud.update\n";
     hud.update(player);
-    std::cout << "monsters.update\n";
+
     for (auto& m : monsters)
         m.update(dt, player, mapGen);
-    std::cout << "coin drop\n";
-    for (auto& m : monsters) {
-        if (!m.isDead()) continue;
+
+    // Идём с конца чтобы индексы не съезжали
+    for (int i = (int)monsters.size() - 1; i >= 0; i--) {
+        if (!monsters[i].isDead()) continue;
+
+        // Дроп монеты
         WorldItem coin;
         coin.type = ItemSpawnType::Coin;
         coin.shape.setRadius(6.f);
         coin.shape.setOrigin({6.f, 6.f});
-        coin.shape.setPosition(m.getPos());
+        coin.shape.setPosition(monsters[i].getPos());
         coin.shape.setFillColor(sf::Color(255, 215, 0));
         worldItems.push_back(coin);
+
+        // Удаляем
+        monsters.erase(monsters.begin() + i);
     }
-    std::cout << "erase monsters\n";
-    monsters.erase(
-        std::remove_if(monsters.begin(), monsters.end(),
-            [](const Monster& m) { return m.isDead(); }),
-        monsters.end()
-    );
-    std::cout << "update done\n";
 }
 
 
@@ -279,18 +271,19 @@ void Dungeon::handleAttack() {
 void Dungeon::handleProjectiles(float dt) {
     player.updateProjectiles(dt, mapGen);
 
-    for (auto& p : player.getProjectiles()) {
-        if (!p.active) continue;
+    auto& projectiles = player.getProjectiles();
+    for (int i = 0; i < (int)projectiles.size(); i++) {
+        if (!projectiles[i].active) continue;
 
-        for (auto& m : monsters) {
-            if (m.isDead()) continue;
+        for (int j = 0; j < (int)monsters.size(); j++) {
+            if (monsters[j].isDead()) continue;
 
-            sf::Vector2f diff = p.shape.getPosition() - m.getPos();
+            sf::Vector2f diff = projectiles[i].shape.getPosition() - monsters[j].getPos();
             float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
 
             if (dist < 20.f) {
-                m.takeDamage(p.damage);
-                p.active = false;
+                monsters[j].takeDamage(projectiles[i].damage);
+                projectiles[i].active = false;
                 break;
             }
         }
