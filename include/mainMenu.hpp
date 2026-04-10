@@ -7,7 +7,6 @@
 enum class MenuResult { 
     None,
     NewGame,
-    LoadGame,
     Options,
     Exit 
     };

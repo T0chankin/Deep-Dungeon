@@ -12,7 +12,7 @@ MainMenu::MainMenu(sf::RenderWindow& window, sf::Font& font, AudioManager& audio
     title.setOrigin({tb.size.x / 2.f, tb.size.y / 2.f});
     title.setPosition({window.getSize().x / 2.f, 160.f});
 
-    std::vector<std::string> labels = {"New Game", "Load Game", "Options", "Exit"};
+    std::vector<std::string> labels = {"New Game", "Options", "Exit"};
     float startY = 320.f;
     for (size_t i = 0; i < labels.size(); ++i) {
         sf::Text item(font, labels[i], 36);
@@ -41,18 +41,17 @@ MenuResult MainMenu::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
         if (key->code == sf::Keyboard::Key::Up) {
             selected = (selected - 1 + items.size()) % items.size();
-            audio.playHover();   // <-- звук
+            audio.playHover();
             updateColors();
         } else if (key->code == sf::Keyboard::Key::Down) {
             selected = (selected + 1) % items.size();
-            audio.playHover();   // <-- звук
+            audio.playHover(); 
             updateColors();
         } else if (key->code == sf::Keyboard::Key::Enter) {
             switch (selected) {
                 case 0: return MenuResult::NewGame;
-                case 1: return MenuResult::LoadGame;
-                case 2: return MenuResult::Options;
-                case 3: return MenuResult::Exit;
+                case 1: return MenuResult::Options;
+                case 2: return MenuResult::Exit;
             }
         }
     }
