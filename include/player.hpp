@@ -39,7 +39,7 @@ public:
     void update(float dt);
     void draw(sf::RenderWindow& window);
 
-    void move(sf::Vector2f direction);
+    void move(sf::Vector2f direction, float dt);
     void doDash();
 
     void attack(sf::Vector2f mousePos);
@@ -83,6 +83,7 @@ private:
     float dashCoolTimer;
     bool canDash;
     bool invincible;
+    sf::Vector2f dashDirection;
 
     float hp;
     float maxHp;

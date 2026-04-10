@@ -2,7 +2,6 @@
 #include <stdexcept>
 const int WINDOW_WIDTH=1920;
 const int WINDOW_HIGHT=1080;
-
 Game::Game()
     : window(sf::VideoMode({WINDOW_HIGHT,WINDOW_WIDTH}), "Deep Dungeon",
              sf::Style::Default, sf::State::Windowed,
@@ -15,9 +14,10 @@ Game::Game()
         throw std::runtime_error("Шрифт не найден!");
 
     audio = new AudioManager();
-    menu    = new MainMenu(window, font, *audio);
+    menu = new MainMenu(window, font, *audio);
     options = new Options(window, font, *audio);
     dungeon = new Dungeon(window, font);
+    scoreScreen = new ScoreScreen(window, font);
     audio->playMenuMusic();
 }
 
@@ -38,7 +38,9 @@ void Game::handleEvents() {
 
         if (state == GameState::Menu) {
             MenuResult result = menu->handleEvent(*event);
-            if (result == MenuResult::NewGame){
+            if (result == MenuResult::NewGame) {
+                delete dungeon;
+                dungeon = new Dungeon(window, font);
                 state = GameState::Playing;
                 audio->playGameMusic();
             }
@@ -64,12 +66,25 @@ void Game::handleEvents() {
                     audio->playMenuMusic();
                 }
         }
+        if (state == GameState::Score) {
+            bool goMenu = false;
+            scoreScreen->handleEvent(*event, goMenu);
+            if (goMenu) {
+                state = GameState::Menu;
+                audio->playMenuMusic();
+            }
+        }
     }
 }
 
 void Game::update(float dt) {
-    if (state == GameState::Playing)
+    if (state == GameState::Playing){
         dungeon->update(dt);
+        if (dungeon->isFinished()) {
+            scoreScreen->setCoins(dungeon->getCoins());
+            state = GameState::Score;
+        }
+    }
 }
 
 void Game::render() {
@@ -81,6 +96,8 @@ void Game::render() {
         options->draw();
     else if (state == GameState::Playing)
         dungeon->draw();
+    else if (state == GameState::Score)
+        scoreScreen->draw();
 
     window.display();
 }

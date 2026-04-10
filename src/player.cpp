@@ -1,9 +1,9 @@
 #include "player.hpp"
 
 Player::Player() {
-    shape.setSize({32.f, 32.f});
+    shape.setSize({20.f, 20.f});
+    shape.setOrigin({10.f, 10.f});
     shape.setFillColor(sf::Color(50, 100, 200));
-    shape.setOrigin({16.f, 16.f});
 
     shape.setPosition({400.f, 300.f});
 
@@ -59,7 +59,6 @@ void Player::update(float dt) {
             invincible = false;
     }
 
-    // Перезарядка рывка
     if (!canDash) {
         dashCoolTimer -= dt;
         if (dashCoolTimer <= 0.f)
@@ -67,16 +66,34 @@ void Player::update(float dt) {
     }
 }
 
-void Player::move(sf::Vector2f direction) {
-    shape.move(direction * speed);
-}
 
 void Player::doDash() {
     if (!canDash) return;
-    dashTimer    = dashDuration;
-    canDash      = false;
+
+    sf::Vector2f dir = {0.f, 0.f};
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) dir.y -= 1.f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) dir.y += 1.f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) dir.x -= 1.f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) dir.x += 1.f;
+
+    float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+    if (len == 0.f) return;
+    dir /= len;
+
+    dashDirection = dir;
+    dashTimer     = 0.12f;
+    dashSpeed     = 280.f;
+    canDash       = false;
     dashCoolTimer = dashCooldown;
-    invincible   = true;
+    invincible    = true;
+}
+
+void Player::move(sf::Vector2f direction, float dt) {
+    if (dashTimer > 0.f) {
+        shape.move(dashDirection * dashSpeed * dt);
+    } else {
+        shape.move(direction * speed * dt);
+    }
 }
 
 void Player::attack(sf::Vector2f mousePos) {

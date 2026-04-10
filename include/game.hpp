@@ -4,8 +4,9 @@
 #include "options.hpp"
 #include "audioManager.hpp"
 #include "dungeon.hpp"
+#include "scoreScreen.hpp"
 
-enum class GameState { Menu, Options, Playing };
+enum class GameState { Menu, Options, Playing, Score };
 
 class Game {
 public:
@@ -20,8 +21,10 @@ private:
     sf::RenderWindow window;
     sf::Font font;
     GameState state;
-    MainMenu* menu;
-    Options* options;
-    AudioManager* audio;
-    Dungeon* dungeon;  // <-- новое
+
+    AudioManager*  audio;
+    MainMenu*      menu;
+    Options*       options;
+    Dungeon*       dungeon;
+    ScoreScreen*   scoreScreen;
 };

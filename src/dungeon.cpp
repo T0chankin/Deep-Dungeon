@@ -1,22 +1,15 @@
 #include "dungeon.hpp"
 #include <cmath>
 
-void Dungeon::drawTestSquare() {
-    sf::RectangleShape square;
-    square.setSize({50.f, 50.f});
-    square.setFillColor(sf::Color::Red);
-    square.setOrigin({25.f, 25.f});
-    square.setPosition({0.f, 0.f});
-    window.draw(square);
-}
-
 Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font)
     : window(window), font(font)
 {
     camera = sf::View(sf::FloatRect({0.f, 0.f},
-        {(float)window.getSize().x, (float)window.getSize().y}));
+        {(float)window.getSize().x/3, (float)window.getSize().y/3}));
 
-    player.setPos({400.f, 300.f});
+    mapGen.generate(currentFloor);
+    player.setPos(mapGen.getPlayerSpawn());
+    camera.setCenter(mapGen.getPlayerSpawn());
 }
 
 void Dungeon::handleEvent(const sf::Event& event) {
@@ -39,9 +32,31 @@ void Dungeon::handleInput(float dt) {
 
     float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
     if (len != 0.f) dir /= len;
+    if (len != 0.f)player.move(dir, dt);
 
-    if (len != 0.f)
-        player.move(dir * dt);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
+        player.doDash();
+}
+
+void Dungeon::checkHatch() {
+    sf::Vector2f pos = player.getPos();
+    int tx = (int)(pos.x / MapGenerator::TILE_SIZE);
+    int ty = (int)(pos.y / MapGenerator::TILE_SIZE);
+
+    if (mapGen.getTile(tx, ty) == Tile::Hatch)
+        nextFloor();
+}
+
+void Dungeon::nextFloor() {
+    currentFloor++;
+
+    if (currentFloor > 3) {
+        finished = true;
+        return;
+    }
+    mapGen.generate(currentFloor);
+    player.setPos(mapGen.getPlayerSpawn());
+    camera.setCenter(mapGen.getPlayerSpawn());
 }
 
 void Dungeon::updateCamera(float dt) {
@@ -61,12 +76,57 @@ void Dungeon::updateCamera(float dt) {
 void Dungeon::update(float dt) {
     handleInput(dt);
     player.update(dt);
+
+    sf::Vector2f pos = player.getPos();
+    resolveCollision(pos);
+    player.setPos(pos);
+
     updateCamera(dt);
+    checkHatch();
 }
 
 void Dungeon::draw() {
     window.setView(camera);
+    mapGen.draw(window);
     player.draw(window);
-    drawTestSquare();
     window.setView(window.getDefaultView());
 }
+void Dungeon::resolveCollision(sf::Vector2f& pos) {
+    int tileSize = MapGenerator::TILE_SIZE;
+    float half   = 10.f;
+
+    std::vector<sf::Vector2f> corners = {
+        {pos.x - half, pos.y - half},
+        {pos.x + half, pos.y - half},
+        {pos.x - half, pos.y + half},
+        {pos.x + half, pos.y + half}
+    };
+
+    for (auto& corner : corners) {
+        int tx = (int)(corner.x / tileSize);
+        int ty = (int)(corner.y / tileSize);
+
+        if (mapGen.getTile(tx, ty) != Tile::Wall) continue;
+
+        float tileLeft   = tx * tileSize;
+        float tileRight  = tileLeft  + tileSize;
+        float tileTop    = ty * tileSize;
+        float tileBottom = tileTop   + tileSize;
+
+        float overlapLeft   = (pos.x + half) - tileLeft;
+        float overlapRight  = tileRight  - (pos.x - half);
+        float overlapTop    = (pos.y + half) - tileTop;
+        float overlapBottom = tileBottom - (pos.y - half);
+
+        float minOverlap = std::min({overlapLeft, overlapRight,
+                                     overlapTop,  overlapBottom});
+
+        if      (minOverlap == overlapLeft)   pos.x -= overlapLeft;
+        else if (minOverlap == overlapRight)  pos.x += overlapRight;
+        else if (minOverlap == overlapTop)    pos.y -= overlapTop;
+        else                                  pos.y += overlapBottom;
+    }
+}
+
+bool Dungeon::isFinished() const { return finished; }
+int Dungeon::getCoins() const    { return player.getCoins(); }
