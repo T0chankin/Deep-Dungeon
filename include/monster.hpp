@@ -47,7 +47,7 @@ private:
 
     sf::Texture texture;
     std::unique_ptr<sf::Sprite> sprite;
-    bool hasSprite = false;
+    bool hasSprite = true;
 
     std::vector<sf::Vector2i> path;
     float pathTimer    = 0.f;

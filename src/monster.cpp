@@ -35,7 +35,6 @@ Monster::Monster(sf::Vector2f pos, MonsterType type, int floorNumber, sf::Font& 
     shape.setPosition(pos);
     attackTimer = 0.f;
 
-    // Загрузка текстуры — после установки всех параметров
     std::string texPath = (type == MonsterType::Melee)
         ? "assets/monster_melee.png"
         : "assets/monster_ranged.png";
