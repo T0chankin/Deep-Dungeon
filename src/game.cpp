@@ -16,7 +16,7 @@ Game::Game()
     audio = new AudioManager();
     menu = new MainMenu(window, font, *audio);
     options = new Options(window, font, *audio);
-    dungeon = new Dungeon(window, font);
+    dungeon = new Dungeon(window, font, *audio);
     scoreScreen = new ScoreScreen(window, font);
     audio->playMenuMusic();
 }
@@ -40,7 +40,7 @@ void Game::handleEvents() {
             MenuResult result = menu->handleEvent(*event);
             if (result == MenuResult::NewGame) {
                 delete dungeon;
-                dungeon = new Dungeon(window, font);
+                dungeon = new Dungeon(window, font, *audio);
                 state = GameState::Playing;
                 audio->playGameMusic();
             }

@@ -12,7 +12,7 @@ Monster::Monster(sf::Vector2f pos, MonsterType type, int floorNumber, sf::Font& 
         shape.setSize({18.f, 18.f});
         shape.setFillColor(sf::Color(200, 50, 50));
         hp             = 50.f * floorMult;
-        maxHp=hp;
+        maxHp          = hp;
         speed          = 70.f * floorMult;
         attackDamage   = 10.f * floorMult;
         attackRange    = 25.f;
@@ -22,7 +22,7 @@ Monster::Monster(sf::Vector2f pos, MonsterType type, int floorNumber, sf::Font& 
         shape.setSize({16.f, 16.f});
         shape.setFillColor(sf::Color(200, 100, 200));
         hp             = 30.f * floorMult;
-        maxHp=hp;
+        maxHp          = hp;
         speed          = 40.f * floorMult;
         attackDamage   = 8.f  * floorMult;
         attackRange    = 250.f;
@@ -33,7 +33,21 @@ Monster::Monster(sf::Vector2f pos, MonsterType type, int floorNumber, sf::Font& 
     shape.setOrigin({shape.getSize().x / 2.f, shape.getSize().y / 2.f});
     shape.setPosition(pos);
     attackTimer = 0.f;
+
+    // Загрузка текстуры — после установки всех параметров
+    std::string texPath = (type == MonsterType::Melee)
+        ? "assets/monster_melee.png"
+        : "assets/monster_ranged.png";
+
+    if (texture.loadFromFile(texPath)) {
+        sprite = new sf::Sprite(texture);
+        sprite->setOrigin({texture.getSize().x / 2.f,
+                           texture.getSize().y / 2.f});
+        hasSprite = true;
+    }
 }
+
+Monster::~Monster() { delete sprite; }
 
 void Monster::resolveCollision(sf::Vector2f& pos, MapGenerator& map, float half) {
     int tileSize = MapGenerator::TILE_SIZE;
@@ -232,8 +246,14 @@ sf::Vector2f Monster::getPos() const   { return shape.getPosition(); }
 sf::FloatRect Monster::getBounds() const { return shape.getGlobalBounds(); }
 
 void Monster::draw(sf::RenderWindow& window) {
-    if (isDead()) return;
-    window.draw(shape);
+        if (isDead()) return;
+
+    if (hasSprite) {
+        sprite->setPosition(shape.getPosition());
+        window.draw(*sprite);
+    } else {
+        window.draw(shape);
+    }
 
     sf::Vector2f pos = shape.getPosition();
     float barWidth   = shape.getSize().x + 4.f;
@@ -264,4 +284,8 @@ void Monster::draw(sf::RenderWindow& window) {
 
     for (auto& b : bullets)
         if (b.active) window.draw(b.shape);
+}
+
+bool Monster::justDied() const {
+    return hp <= 0.f && !deathHandled;
 }

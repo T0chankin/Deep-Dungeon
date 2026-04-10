@@ -122,5 +122,9 @@ private:
 
     std::vector<Projectile> projectiles;
 
+    sf::Texture texture;
+    sf::Sprite* sprite = nullptr;  // nullptr если текстура не загружена
+    bool hasSprite = false;
+
     
 };

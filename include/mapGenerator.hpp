@@ -20,6 +20,17 @@ struct MonsterSpawn {
     MonsterType type;
 };
 
+enum class ItemSpawnType {
+    Coin,
+    HealthPotion,
+    ManaPotion
+};
+
+struct ItemSpawn {
+    sf::Vector2i tilePos;
+    ItemSpawnType type;
+};
+
 struct Room {
     int x, y;
     int width, height;
@@ -46,7 +57,7 @@ public:
     static const int TILE_SIZE = 32;
 
     MapGenerator();
-
+    ~MapGenerator();
     void generate(int floorNumber);
 
     Tile getTile(int x, int y) const;
@@ -56,6 +67,8 @@ public:
     FloorType getFloorType() const;
 
     void draw(sf::RenderWindow& window);
+
+    std::vector<ItemSpawn> getItemSpawns() const;
 
 private:
     std::vector<std::vector<Tile>> map;
@@ -77,4 +90,16 @@ private:
 
     sf::Color getTileColor(Tile tile) const;
     bool inBounds(int x, int y) const;
+
+    std::vector<ItemSpawn> itemSpawns;
+    void placeItems(int floorNumber);
+
+    sf::Texture floorTexture;
+    sf::Sprite* floorSprite = nullptr;
+    bool hasFloorTexture = false;
+
+    sf::Texture hatchTexture;
+    sf::Sprite* hatchSprite = nullptr;
+    bool hasHatchTexture = false;
 };
+

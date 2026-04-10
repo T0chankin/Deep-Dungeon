@@ -5,6 +5,21 @@
 MapGenerator::MapGenerator() {
     map.assign(MAP_H, std::vector<Tile>(MAP_W, Tile::Wall));
     rng.seed(std::random_device{}());
+
+    if (floorTexture.loadFromFile("assets/floor.png")) {
+        floorTexture.setRepeated(true);
+        floorSprite = new sf::Sprite(floorTexture);
+        hasFloorTexture = true;
+    }
+    if (hatchTexture.loadFromFile("assets/hatch.png")) {
+    hatchSprite = new sf::Sprite(hatchTexture);
+    hatchSprite->setOrigin({hatchTexture.getSize().x / 2.f,
+                            hatchTexture.getSize().y / 2.f});
+    hasHatchTexture = true;
+}
+}
+MapGenerator::~MapGenerator() {
+    delete floorSprite;
 }
 
 bool MapGenerator::inBounds(int x, int y) const {
@@ -36,15 +51,16 @@ void MapGenerator::generate(int floorNumber) {
     placeSpawn();
     placeHatch();
     placeMonsters(floorNumber);
+    placeItems(floorNumber);
 }
 
 void MapGenerator::placeObstacleRooms(int floorNumber) {
-    std::uniform_int_distribution<int> roomW(4, 8);
-    std::uniform_int_distribution<int> roomH(4, 7);
-    std::uniform_int_distribution<int> roomX(3, MAP_W - 12);
-    std::uniform_int_distribution<int> roomY(3, MAP_H - 10);
+    std::uniform_int_distribution<int> roomW(5, 13);
+    std::uniform_int_distribution<int> roomH(4, 12);
+    std::uniform_int_distribution<int> roomX(3, MAP_W - 3);
+    std::uniform_int_distribution<int> roomY(3, MAP_H - 2);
 
-    int count = 5 + floorNumber * 2;
+    int count = 12 + floorNumber * 2;
 
     for (int i = 0; i < count; i++) {
         Room room;
@@ -193,9 +209,71 @@ void MapGenerator::draw(sf::RenderWindow& window) {
 
     for (int y = 0; y < MAP_H; y++) {
         for (int x = 0; x < MAP_W; x++) {
-            tile.setPosition({x * (float)TILE_SIZE, y * (float)TILE_SIZE});
-            tile.setFillColor(getTileColor(map[y][x]));
-            window.draw(tile);
+            Tile t = map[y][x];
+            sf::Vector2f pos = {x * (float)TILE_SIZE, y * (float)TILE_SIZE};
+
+            if (t == Tile::Wall) {
+                tile.setPosition(pos);
+                tile.setFillColor(sf::Color(40, 40, 60));
+                window.draw(tile);
+            } else {
+                // Пол, люк, спавн — рисуем текстуру или цвет
+                if (hasFloorTexture) {
+                    floorSprite->setPosition(pos);
+                    floorSprite->setTextureRect(sf::IntRect(
+                        {0, 0},
+                        {TILE_SIZE, TILE_SIZE}
+                    ));
+                    window.draw(*floorSprite);
+                } else {
+                    tile.setPosition(pos);
+                    tile.setFillColor(getTileColor(t));
+                    window.draw(tile);
+                }
+                if (t == Tile::Hatch) {
+                    if (hasHatchTexture) {
+                        hatchSprite->setPosition({
+                            x * (float)TILE_SIZE + TILE_SIZE / 2.f,
+                            y * (float)TILE_SIZE + TILE_SIZE / 2.f
+                        });
+                        window.draw(*hatchSprite);
+                    } else {
+                        tile.setFillColor(sf::Color(0, 200, 200));
+                        tile.setPosition(pos);
+                        window.draw(tile);
+                    }
+                }
+
+                // Поверх текстуры рисуем люк и спавн
+                if (t == Tile::Hatch || t == Tile::Spawn) {
+                    tile.setSize({(float)TILE_SIZE - 1.f, (float)TILE_SIZE - 1.f});
+                    tile.setPosition(pos);
+                    tile.setFillColor(getTileColor(t));
+                    window.draw(tile);
+                }
+            }
         }
+    }
+}
+
+std::vector<ItemSpawn> MapGenerator::getItemSpawns() const { return itemSpawns; }
+
+void MapGenerator::placeItems(int floorNumber) {
+    itemSpawns.clear();
+    std::uniform_int_distribution<int> coin(0, 2);  // 0=монета 1=хилка 2=мана
+
+    int count = 8 + floorNumber * 3; //количество предметов на этаже
+
+    for (int i = 0; i < count; i++) {
+        sf::Vector2i pos = randomFloorTile();
+        ItemSpawn spawn;
+        spawn.tilePos = pos;
+
+        int roll = coin(rng);
+        if (roll == 0)      spawn.type = ItemSpawnType::Coin;
+        else if (roll == 1) spawn.type = ItemSpawnType::HealthPotion;
+        else                spawn.type = ItemSpawnType::ManaPotion;
+
+        itemSpawns.push_back(spawn);
     }
 }

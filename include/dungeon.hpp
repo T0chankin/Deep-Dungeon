@@ -4,10 +4,12 @@
 #include "mapGenerator.hpp"
 #include "monster.hpp"
 #include "hud.hpp"
+#include "audioManager.hpp"
+
 
 class Dungeon {
 public:
-    Dungeon(sf::RenderWindow& window, sf::Font& font);
+    Dungeon(sf::RenderWindow& window, sf::Font& font, AudioManager& audio);
 
     void handleEvent(const sf::Event& event);
     void update(float dt);
@@ -51,4 +53,16 @@ private:
     
     Hud hud;
     void usePotion(ItemType type);
+
+    struct WorldItem {
+        sf::CircleShape shape;
+        ItemSpawnType type;
+        bool collected = false;
+    };
+
+    std::vector<WorldItem> worldItems;
+
+    void spawnItems();
+    void checkItemPickup();
+    AudioManager& audio;
 };

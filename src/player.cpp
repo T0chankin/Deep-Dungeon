@@ -71,10 +71,19 @@ Player::Player() {
     inventory.push_back(mana_pot);
 
     currentWeaponIndex = 0;
-    coins = 0; 
+    coins = 0;
+
+    if (texture.loadFromFile("assets/player.png")) {
+    sprite = new sf::Sprite(texture);
+    sprite->setOrigin({(float)texture.getSize().x / 2.f,
+                       (float)texture.getSize().y / 2.f});
+    hasSprite = true;
+}
 }
 
-Player::~Player() {}
+Player::~Player() {
+    delete sprite;
+}
 
 void Player::update(float dt) {
     if (attackTimer > 0.f)
@@ -113,7 +122,7 @@ void Player::doDash() {
     dir /= len;
 
     dashDirection = dir;
-    dashTimer     = 0.12f;
+    dashTimer     = 0.2f;
     dashSpeed     = 280.f;
     canDash       = false;
     dashCoolTimer = dashCooldown;
@@ -213,13 +222,29 @@ void Player::switchWeapon(int index) {
 }
 
 void Player::draw(sf::RenderWindow& window) {
-    if (invincible) {
-        sf::Color c = shape.getFillColor();
-        c.a = (c.a == 255) ? 100 : 255;
-        shape.setFillColor(c);
+    if (hasSprite) {
+        // Сбрасываем прозрачность
+        sprite->setColor(sf::Color(255, 255, 255, 255));
+
+        if (invincible) {
+            sf::Color c = sprite->getColor();
+            c.a = 100;
+            sprite->setColor(c);
+        }
+
+        sprite->setPosition(shape.getPosition());
+        window.draw(*sprite);
+    } else {
+        shape.setFillColor(sf::Color(50, 100, 200, 255));
+
+        if (invincible) {
+            shape.setFillColor(sf::Color(50, 100, 200, 100));
+        }
+
+        window.draw(shape);
     }
-    window.draw(shape);
 }
+
 void Player::updateProjectiles(float dt, MapGenerator& map) {
     for (auto& p : projectiles) {
         if (!p.active) continue;

@@ -1,8 +1,8 @@
 #include "dungeon.hpp"
 #include <cmath>
 
-Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font)
-    : window(window), font(font), hud(window, font)
+Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font, AudioManager& audio)
+    : window(window), font(font), hud(window, font), audio(audio)
 {
     camera = sf::View(sf::FloatRect({0.f, 0.f},
         {(float)window.getSize().x/3, (float)window.getSize().y/3}));
@@ -11,11 +11,11 @@ Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font)
     player.setPos(mapGen.getPlayerSpawn());
     camera.setCenter(mapGen.getPlayerSpawn());
     spawnMonsters();
+    spawnItems();
 }
 
 
 void Dungeon::handleEvent(const sf::Event& event) {
-    // Атака мышью
     if (const auto* click = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (click->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos = window.mapPixelToCoords(
@@ -51,17 +51,6 @@ void Dungeon::handleInput(float dt) {
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
         player.doDash();
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
-            usePotion(ItemType::HealthPotion);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
-            usePotion(ItemType::ManaPotion);
-
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1))
-        player.switchWeapon(0);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2))
-        player.switchWeapon(1);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3))
-        player.switchWeapon(2);
 }
 
 void Dungeon::checkHatch() {
@@ -84,6 +73,7 @@ void Dungeon::nextFloor() {
     player.setPos(mapGen.getPlayerSpawn());
     camera.setCenter(mapGen.getPlayerSpawn());
     spawnMonsters();
+    spawnItems();
 }
 
 void Dungeon::updateCamera(float dt) {
@@ -114,23 +104,41 @@ void Dungeon::update(float dt) {
     if (attackVisualTimer > 0.f)
         attackVisualTimer -= dt;
 
+
+    checkItemPickup();
+
+    updateCamera(dt);
+    checkHatch();
+    hud.update(player);
+
     for (auto& m : monsters)
         m.update(dt, player, mapGen);
+        for (auto& m : monsters) {
+            if (!m.isDead()) continue;
 
+                WorldItem coin;
+                coin.type = ItemSpawnType::Coin;
+                coin.shape.setRadius(6.f);
+                coin.shape.setOrigin({6.f, 6.f});
+                coin.shape.setPosition(m.getPos());
+                coin.shape.setFillColor(sf::Color(255, 215, 0));
+                worldItems.push_back(coin);
+            }
     monsters.erase(
         std::remove_if(monsters.begin(), monsters.end(),
             [](const Monster& m) { return m.isDead(); }),
         monsters.end()
     );
-
-    updateCamera(dt);
-    checkHatch();
-    hud.update(player);
 }
+
 
 void Dungeon::draw() {
     window.setView(camera);
     mapGen.draw(window);
+
+    for (auto& item : worldItems)
+        if (!item.collected) window.draw(item.shape);
+
     drawAttackVisual();
     player.drawProjectiles(window);
     for (auto& m : monsters) m.draw(window);
@@ -139,6 +147,7 @@ void Dungeon::draw() {
     window.setView(window.getDefaultView());
     hud.draw();
 }
+
 
 void Dungeon::resolveCollision(sf::Vector2f& pos) {
     int tileSize = MapGenerator::TILE_SIZE;
@@ -225,6 +234,13 @@ void Dungeon::handleAttack() {
     if (!player.getIsAttacking()) return;
 
     Weapon w = player.getCurrentWeapon();
+    if (w.type == WeaponType::Sword)
+        audio.playSword();
+    else if (w.type == WeaponType::Bow)
+        audio.playBow();
+    else if (w.type == WeaponType::Fireball)
+        audio.playFireball();
+    
     sf::Vector2f playerPos = player.getPos();
     sf::Vector2f attackDir = player.getAttackDirection();
 
@@ -279,10 +295,88 @@ void Dungeon::usePotion(ItemType type) {
     for (int i = 0; i < (int)inventory.size(); i++) {
         if (inventory[i].type == type) {
             player.useItem(i);
+            audio.playHeal();
             break;
         }
     }
 }
+
+void Dungeon::spawnItems() {
+    worldItems.clear();
+
+    for (auto& spawn : mapGen.getItemSpawns()) {
+        WorldItem item;
+        sf::Vector2f pos = {
+            spawn.tilePos.x * (float)MapGenerator::TILE_SIZE + MapGenerator::TILE_SIZE / 2.f,
+            spawn.tilePos.y * (float)MapGenerator::TILE_SIZE + MapGenerator::TILE_SIZE / 2.f
+        };
+
+        item.type = spawn.type;
+        item.shape.setRadius(6.f);
+        item.shape.setOrigin({6.f, 6.f});
+        item.shape.setPosition(pos);
+
+        switch (spawn.type) {
+            case ItemSpawnType::Coin:
+                item.shape.setFillColor(sf::Color(255, 215, 0));   // золотой
+                break;
+            case ItemSpawnType::HealthPotion:
+                item.shape.setFillColor(sf::Color(200, 50, 50));   // красный
+                break;
+            case ItemSpawnType::ManaPotion:
+                item.shape.setFillColor(sf::Color(50, 80, 200));   // синий
+                break;
+        }
+
+        worldItems.push_back(item);
+    }
+}
+
+void Dungeon::checkItemPickup() {
+    sf::Vector2f playerPos = player.getPos();
+
+    for (auto& item : worldItems) {
+        if (item.collected) continue;
+
+        sf::Vector2f diff = item.shape.getPosition() - playerPos;
+        float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+
+        if (dist > 20.f) continue;
+
+        item.collected = true;
+        switch (item.type) {
+            case ItemSpawnType::Coin:
+                player.addCoins(1);
+                audio.playPickup();
+                break;
+            case ItemSpawnType::HealthPotion: {
+                Item pot;
+                pot.name  = "Health Potion";
+                pot.type  = ItemType::HealthPotion;
+                pot.value = 30.f;
+                player.pickUpItem(pot);
+                audio.playPickup();
+                break;
+            }
+            case ItemSpawnType::ManaPotion: {
+            Item pot;
+            pot.name  = "Mana Potion";
+            pot.type  = ItemType::ManaPotion;
+            pot.value = 40.f;
+            player.pickUpItem(pot);
+            audio.playPickup();   // <-- звук подбора
+            break;
+            }
+        }
+    }
+
+    worldItems.erase(
+        std::remove_if(worldItems.begin(), worldItems.end(),
+            [](const WorldItem& i) { return i.collected; }),
+        worldItems.end()
+    );
+}
+
 int Dungeon::getCurrentFloor() const {return currentFloor;}
 bool Dungeon::isFinished() const {return finished;}
 int Dungeon::getCoins() const {return player.getCoins();}

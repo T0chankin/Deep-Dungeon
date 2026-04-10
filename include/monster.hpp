@@ -9,7 +9,7 @@ enum class MonsterState { Idle, Chase, Attack };
 class Monster {
 public:
     Monster(sf::Vector2f pos, MonsterType type, int floorNumber, sf::Font& font);
-
+    ~Monster();
     void update(float dt, Player& player, MapGenerator& map);
     void draw(sf::RenderWindow& window);
 
@@ -18,6 +18,7 @@ public:
 
     sf::Vector2f getPos() const;
     sf::FloatRect getBounds() const;
+    bool justDied() const;
 
 private:
     sf::RectangleShape shape;
@@ -34,6 +35,10 @@ private:
     float aggroRange;
 
     sf::Font* font = nullptr;
+
+    sf::Texture texture;
+    sf::Sprite* sprite = nullptr;
+    bool hasSprite = false;
 
     std::vector<sf::Vector2i> path;
     float pathTimer    = 0.f;
@@ -53,6 +58,6 @@ private:
     void shoot(sf::Vector2f direction);
     void resolveCollision(sf::Vector2f& pos, MapGenerator& map, float half);
 
-    sf::Vector2f moveAlongPath(sf::Vector2f myPos, float spd,
-                                float dt, MapGenerator& map, float half);
+    sf::Vector2f moveAlongPath(sf::Vector2f myPos, float spd, float dt, MapGenerator& map, float half);
+    bool deathHandled = false;
 };
