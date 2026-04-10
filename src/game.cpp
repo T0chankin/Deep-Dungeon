@@ -78,11 +78,23 @@ void Game::handleEvents() {
 }
 
 void Game::update(float dt) {
-    if (state == GameState::Playing){
+    if (state == GameState::Playing) {
         dungeon->update(dt);
+
         if (dungeon->isFinished()) {
-            scoreScreen->setCoins(dungeon->getCoins());
+            scoreScreen->show(ScoreType::Win,
+                              dungeon->getCoins(),
+                              dungeon->getCurrentFloor());
             state = GameState::Score;
+            audio->playMenuMusic();
+        }
+
+        if (dungeon->isPlayerDead()) {
+            scoreScreen->show(ScoreType::Death,
+                              dungeon->getCoins(),
+                              dungeon->getCurrentFloor());
+            state = GameState::Score;
+            audio->playMenuMusic();
         }
     }
 }

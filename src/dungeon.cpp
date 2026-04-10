@@ -2,7 +2,7 @@
 #include <cmath>
 
 Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font)
-    : window(window), font(font)
+    : window(window), font(font), hud(window, font)
 {
     camera = sf::View(sf::FloatRect({0.f, 0.f},
         {(float)window.getSize().x/3, (float)window.getSize().y/3}));
@@ -10,14 +10,28 @@ Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font)
     mapGen.generate(currentFloor);
     player.setPos(mapGen.getPlayerSpawn());
     camera.setCenter(mapGen.getPlayerSpawn());
+    spawnMonsters();
 }
 
+
 void Dungeon::handleEvent(const sf::Event& event) {
+    // Атака мышью
     if (const auto* click = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (click->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos = window.mapPixelToCoords(
                 sf::Mouse::getPosition(window), camera);
             player.attack(mousePos);
+        }
+    }
+
+    if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
+        switch (key->code) {
+            case sf::Keyboard::Key::Num1: player.switchWeapon(0); break;
+            case sf::Keyboard::Key::Num2: player.switchWeapon(1); break;
+            case sf::Keyboard::Key::Num3: player.switchWeapon(2); break;
+            case sf::Keyboard::Key::Q:    usePotion(ItemType::HealthPotion); break;
+            case sf::Keyboard::Key::E:    usePotion(ItemType::ManaPotion);   break;
+            default: break;
         }
     }
 }
@@ -36,6 +50,18 @@ void Dungeon::handleInput(float dt) {
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
         player.doDash();
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
+            usePotion(ItemType::HealthPotion);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
+            usePotion(ItemType::ManaPotion);
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1))
+        player.switchWeapon(0);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2))
+        player.switchWeapon(1);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3))
+        player.switchWeapon(2);
 }
 
 void Dungeon::checkHatch() {
@@ -57,6 +83,7 @@ void Dungeon::nextFloor() {
     mapGen.generate(currentFloor);
     player.setPos(mapGen.getPlayerSpawn());
     camera.setCenter(mapGen.getPlayerSpawn());
+    spawnMonsters();
 }
 
 void Dungeon::updateCamera(float dt) {
@@ -81,16 +108,38 @@ void Dungeon::update(float dt) {
     resolveCollision(pos);
     player.setPos(pos);
 
+    handleAttack();
+    handleProjectiles(dt);
+
+    if (attackVisualTimer > 0.f)
+        attackVisualTimer -= dt;
+
+    for (auto& m : monsters)
+        m.update(dt, player, mapGen);
+
+    monsters.erase(
+        std::remove_if(monsters.begin(), monsters.end(),
+            [](const Monster& m) { return m.isDead(); }),
+        monsters.end()
+    );
+
     updateCamera(dt);
     checkHatch();
+    hud.update(player);
 }
 
 void Dungeon::draw() {
     window.setView(camera);
     mapGen.draw(window);
+    drawAttackVisual();
+    player.drawProjectiles(window);
+    for (auto& m : monsters) m.draw(window);
     player.draw(window);
+
     window.setView(window.getDefaultView());
+    hud.draw();
 }
+
 void Dungeon::resolveCollision(sf::Vector2f& pos) {
     int tileSize = MapGenerator::TILE_SIZE;
     float half   = 10.f;
@@ -127,6 +176,115 @@ void Dungeon::resolveCollision(sf::Vector2f& pos) {
         else                                  pos.y += overlapBottom;
     }
 }
+void Dungeon::drawAttackVisual() {
+    if (attackVisualTimer <= 0.f) return;
 
-bool Dungeon::isFinished() const { return finished; }
-int Dungeon::getCoins() const    { return player.getCoins(); }
+    Weapon w          = player.getCurrentWeapon();
+    sf::Vector2f pos  = player.getPos();
+    sf::Vector2f dir  = player.getAttackDirection();
+
+    float attackAngle = std::atan2(dir.y, dir.x) * (180.f / 3.14159f);
+    float halfAngle   = w.angle / 2.f;
+
+    int points = 12;
+    sf::ConvexShape sector(points + 2);
+    sector.setPoint(0, {0.f, 0.f});
+
+    for (int i = 0; i <= points; i++) {
+        float angle = (attackAngle - halfAngle + (w.angle / points) * i)
+                      * (3.14159f / 180.f);
+        sector.setPoint(i + 1, {
+            std::cos(angle) * w.range,
+            std::sin(angle) * w.range
+        });
+    }
+
+    sector.setPosition(pos);
+
+    if (w.type == WeaponType::Sword)
+        sector.setFillColor(sf::Color(255, 255, 100, 80));
+    else if (w.type == WeaponType::Fireball)
+        sector.setFillColor(sf::Color(255, 100, 0, 80));
+    else
+        sector.setFillColor(sf::Color(100, 200, 255, 80));
+
+    window.draw(sector);
+}
+
+void Dungeon::spawnMonsters() {
+    monsters.clear();
+    for (auto& spawn : mapGen.getMonsterSpawns()) {
+        sf::Vector2f pos = {
+            spawn.tilePos.x * (float)MapGenerator::TILE_SIZE + MapGenerator::TILE_SIZE / 2.f,
+            spawn.tilePos.y * (float)MapGenerator::TILE_SIZE + MapGenerator::TILE_SIZE / 2.f
+        };
+    monsters.emplace_back(pos, spawn.type, currentFloor, font);
+    }
+}
+void Dungeon::handleAttack() {
+    if (!player.getIsAttacking()) return;
+
+    Weapon w = player.getCurrentWeapon();
+    sf::Vector2f playerPos = player.getPos();
+    sf::Vector2f attackDir = player.getAttackDirection();
+
+    for (auto& m : monsters) {
+        if (m.isDead()) continue;
+
+        sf::Vector2f diff = m.getPos() - playerPos;
+        float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+
+        if (dist > w.range) continue;
+
+        float monsterAngle = std::atan2(diff.y, diff.x);
+        float attackAngle  = std::atan2(attackDir.y, attackDir.x);
+        float halfAngle    = (w.angle / 2.f) * (3.14159f / 180.f);
+
+        float angleDiff = monsterAngle - attackAngle;
+        
+        while (angleDiff >  3.14159f) angleDiff -= 2.f * 3.14159f;
+        while (angleDiff < -3.14159f) angleDiff += 2.f * 3.14159f;
+
+        if (std::abs(angleDiff) <= halfAngle)
+            m.takeDamage(w.damage);
+    }
+
+    attackVisualTimer = 0.1f;
+    player.stopAttacking();
+}
+
+void Dungeon::handleProjectiles(float dt) {
+    player.updateProjectiles(dt, mapGen);
+
+    for (auto& p : player.getProjectiles()) {
+        if (!p.active) continue;
+
+        for (auto& m : monsters) {
+            if (m.isDead()) continue;
+
+            sf::Vector2f diff = p.shape.getPosition() - m.getPos();
+            float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+
+            if (dist < 20.f) {
+                m.takeDamage(p.damage);
+                p.active = false;
+                break;
+            }
+        }
+    }
+}
+
+void Dungeon::usePotion(ItemType type) {
+    auto inventory = player.getInventory();
+    for (int i = 0; i < (int)inventory.size(); i++) {
+        if (inventory[i].type == type) {
+            player.useItem(i);
+            break;
+        }
+    }
+}
+int Dungeon::getCurrentFloor() const {return currentFloor;}
+bool Dungeon::isFinished() const {return finished;}
+int Dungeon::getCoins() const {return player.getCoins();}
+
+bool Dungeon::isPlayerDead() const { return player.isDead(); }

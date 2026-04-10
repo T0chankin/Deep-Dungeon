@@ -2,6 +2,8 @@
 #include <SFML/Graphics.hpp>
 #include "player.hpp"
 #include "mapGenerator.hpp"
+#include "monster.hpp"
+#include "hud.hpp"
 
 class Dungeon {
 public:
@@ -14,12 +16,18 @@ public:
     bool isFinished() const;
     int getCoins() const;
 
+    int getCurrentFloor() const;
+
+    bool isPlayerDead() const;
 private:
     sf::RenderWindow& window;
     sf::Font& font;
 
     Player player;
     MapGenerator mapGen;
+
+    std::vector<Monster> monsters;
+    void spawnMonsters();
 
     sf::View camera;
     float cameraDeadZone = 80.f;
@@ -33,4 +41,14 @@ private:
     void checkHatch();
     void nextFloor();
     void resolveCollision(sf::Vector2f& pos);
+
+    void handleAttack();
+    float attackVisualTimer = 0.f;
+    sf::ConvexShape attackShape;
+    void drawAttackVisual();
+
+    void handleProjectiles(float dt);
+    
+    Hud hud;
+    void usePotion(ItemType type);
 };

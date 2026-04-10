@@ -3,6 +3,9 @@
 #include <vector>
 #include <string>
 
+class MapGenerator;
+enum class Tile;
+
 enum class ItemType {
     HealthPotion,
     ManaPotion
@@ -30,6 +33,15 @@ struct Weapon {
     float range;
     float angle;
 };
+struct Projectile {
+    sf::CircleShape shape;
+    sf::Vector2f direction;
+    float speed;
+    float damage;
+    bool active = true;
+};
+
+
 
 class Player {
 public:
@@ -72,6 +84,10 @@ public:
     void setPos(sf::Vector2f newPos);
     void setSpeed(float newSpeed);
 
+    void updateProjectiles(float dt, MapGenerator& map);
+    void drawProjectiles(sf::RenderWindow& window);
+    std::vector<Projectile>& getProjectiles();
+
 private:
     sf::RectangleShape shape;
 
@@ -103,4 +119,8 @@ private:
 
     std::vector<Item> inventory;
     int coins;
+
+    std::vector<Projectile> projectiles;
+
+    
 };
