@@ -1,5 +1,6 @@
 #include "monster.hpp"
 #include "pathfinder.hpp"
+#include <memory>
 #include <cmath>
 #include <algorithm>
 
@@ -40,14 +41,13 @@ Monster::Monster(sf::Vector2f pos, MonsterType type, int floorNumber, sf::Font& 
         : "assets/monster_ranged.png";
 
     if (texture.loadFromFile(texPath)) {
-        sprite = new sf::Sprite(texture);
+        sprite = std::make_unique<sf::Sprite>(texture);
         sprite->setOrigin({texture.getSize().x / 2.f,
                            texture.getSize().y / 2.f});
         hasSprite = true;
     }
 }
 
-Monster::~Monster() { delete sprite; }
 
 void Monster::resolveCollision(sf::Vector2f& pos, MapGenerator& map, float half) {
     int tileSize = MapGenerator::TILE_SIZE;

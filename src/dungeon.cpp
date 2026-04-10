@@ -10,6 +10,7 @@ Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font, AudioManager& audio)
     mapGen.generate(currentFloor);
     player.setPos(mapGen.getPlayerSpawn());
     camera.setCenter(mapGen.getPlayerSpawn());
+    monsters.reserve(50);
     spawnMonsters();
     spawnItems();
 }
@@ -114,19 +115,21 @@ void Dungeon::update(float dt) {
 
     // Идём с конца чтобы индексы не съезжали
     for (int i = (int)monsters.size() - 1; i >= 0; i--) {
-        if (!monsters[i].isDead()) continue;
+    if (!monsters[i].isDead()) continue;
 
-        // Дроп монеты
-        WorldItem coin;
-        coin.type = ItemSpawnType::Coin;
-        coin.shape.setRadius(6.f);
-        coin.shape.setOrigin({6.f, 6.f});
-        coin.shape.setPosition(monsters[i].getPos());
-        coin.shape.setFillColor(sf::Color(255, 215, 0));
-        worldItems.push_back(coin);
+    std::cout << "Monster " << i << " died, dropping coin\n";
+    
+    WorldItem coin;
+    coin.type = ItemSpawnType::Coin;
+    coin.shape.setRadius(6.f);
+    coin.shape.setOrigin({6.f, 6.f});
+    coin.shape.setPosition(monsters[i].getPos());
+    coin.shape.setFillColor(sf::Color(255, 215, 0));
+    worldItems.push_back(coin);
 
-        // Удаляем
-        monsters.erase(monsters.begin() + i);
+    std::cout << "Erasing monster " << i << "\n";
+    monsters.erase(monsters.begin() + i);
+    std::cout << "Erased\n";
     }
 }
 
@@ -221,6 +224,7 @@ void Dungeon::drawAttackVisual() {
 
 void Dungeon::spawnMonsters() {
     monsters.clear();
+    monsters.reserve(50);  // резервируем снова после clear
     for (auto& spawn : mapGen.getMonsterSpawns()) {
         sf::Vector2f pos = {
             spawn.tilePos.x * (float)MapGenerator::TILE_SIZE + MapGenerator::TILE_SIZE / 2.f,

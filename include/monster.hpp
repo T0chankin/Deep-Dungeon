@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <memory>
 #include "player.hpp"
 #include "mapGenerator.hpp"
 #include "pathfinder.hpp"
@@ -9,7 +10,15 @@ enum class MonsterState { Idle, Chase, Attack };
 class Monster {
 public:
     Monster(sf::Vector2f pos, MonsterType type, int floorNumber, sf::Font& font);
-    ~Monster();
+    ~Monster() = default;
+
+    // Разрешаем перемещение (нужно для std::vector при erase/remove_if)
+    Monster(Monster&&) = default;
+    Monster& operator=(Monster&&) = default;
+
+    // Запрещаем копирование (texture не копируется корректно)
+    Monster(const Monster&) = delete;
+    Monster& operator=(const Monster&) = delete;
     void update(float dt, Player& player, MapGenerator& map);
     void draw(sf::RenderWindow& window);
 
@@ -37,7 +46,7 @@ private:
     sf::Font* font = nullptr;
 
     sf::Texture texture;
-    sf::Sprite* sprite = nullptr;
+    std::unique_ptr<sf::Sprite> sprite;
     bool hasSprite = false;
 
     std::vector<sf::Vector2i> path;

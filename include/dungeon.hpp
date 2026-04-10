@@ -29,7 +29,7 @@ private:
     Player player;
     MapGenerator mapGen;
 
-    std::deque<Monster> monsters;
+    std::vector<Monster> monsters;
     void spawnMonsters();
 
     sf::View camera;
