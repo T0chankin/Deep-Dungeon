@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Audio.hpp>
 #include <string>
+#include <memory>
 
 class AudioManager {
 public:
@@ -28,7 +29,6 @@ private:
     sf::Music menuMusic;
     sf::Music gameMusic;
 
-    // Буферы
     sf::SoundBuffer hoverBuffer;
     sf::SoundBuffer pickupBuffer;
     sf::SoundBuffer healBuffer;
@@ -37,18 +37,20 @@ private:
     sf::SoundBuffer fireballBuffer;
     sf::SoundBuffer monsterAttackBuffer;
 
-    // Звуки — инициализируем ПОСЛЕ загрузки буферов
-    sf::Sound hoverSound;
-    sf::Sound pickupSound;
-    sf::Sound healSound;
-    sf::Sound swordSound;
-    sf::Sound bowSound;
-    sf::Sound fireballSound;
-    sf::Sound monsterAttackSound;
+    // Указатели — создаём после загрузки буфера
+    std::unique_ptr<sf::Sound> hoverSound;
+    std::unique_ptr<sf::Sound> pickupSound;
+    std::unique_ptr<sf::Sound> healSound;
+    std::unique_ptr<sf::Sound> swordSound;
+    std::unique_ptr<sf::Sound> bowSound;
+    std::unique_ptr<sf::Sound> fireballSound;
+    std::unique_ptr<sf::Sound> monsterAttackSound;
 
     float musicVolume = 50.f;
     float soundVolume = 50.f;
 
-    bool loadSound(sf::SoundBuffer& buffer, sf::Sound& sound,
+    void loadSound(sf::SoundBuffer& buffer,
+                   std::unique_ptr<sf::Sound>& sound,
                    const std::string& path);
+    void playSound(std::unique_ptr<sf::Sound>& sound);
 };

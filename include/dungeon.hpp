@@ -5,6 +5,7 @@
 #include "monster.hpp"
 #include "hud.hpp"
 #include "audioManager.hpp"
+#include <deque>
 
 
 class Dungeon {
@@ -28,7 +29,7 @@ private:
     Player player;
     MapGenerator mapGen;
 
-    std::vector<Monster> monsters;
+    std::deque<Monster> monsters;
     void spawnMonsters();
 
     sf::View camera;

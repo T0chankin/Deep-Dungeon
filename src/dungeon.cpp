@@ -1,6 +1,6 @@
 #include "dungeon.hpp"
 #include <cmath>
-
+#include <iostream>
 Dungeon::Dungeon(sf::RenderWindow& window, sf::Font& font, AudioManager& audio)
     : window(window), font(font), hud(window, font), audio(audio)
 {
@@ -91,44 +91,51 @@ void Dungeon::updateCamera(float dt) {
 }
 
 void Dungeon::update(float dt) {
+    std::cout << "handleInput\n";
     handleInput(dt);
+    std::cout << "player.update\n";
     player.update(dt);
-
+    std::cout << "resolveCollision\n";
     sf::Vector2f pos = player.getPos();
     resolveCollision(pos);
     player.setPos(pos);
-
+    std::cout << "handleAttack\n";
     handleAttack();
+    std::cout << "handleProjectiles\n";
     handleProjectiles(dt);
 
     if (attackVisualTimer > 0.f)
         attackVisualTimer -= dt;
 
-
+    std::cout << "checkItemPickup\n";
     checkItemPickup();
-
+    std::cout << "updateCamera\n";
     updateCamera(dt);
+    std::cout << "checkHatch\n";
     checkHatch();
+    std::cout << "hud.update\n";
     hud.update(player);
-
+    std::cout << "monsters.update\n";
     for (auto& m : monsters)
         m.update(dt, player, mapGen);
-        for (auto& m : monsters) {
-            if (!m.isDead()) continue;
-
-                WorldItem coin;
-                coin.type = ItemSpawnType::Coin;
-                coin.shape.setRadius(6.f);
-                coin.shape.setOrigin({6.f, 6.f});
-                coin.shape.setPosition(m.getPos());
-                coin.shape.setFillColor(sf::Color(255, 215, 0));
-                worldItems.push_back(coin);
-            }
+    std::cout << "coin drop\n";
+    for (auto& m : monsters) {
+        if (!m.isDead()) continue;
+        WorldItem coin;
+        coin.type = ItemSpawnType::Coin;
+        coin.shape.setRadius(6.f);
+        coin.shape.setOrigin({6.f, 6.f});
+        coin.shape.setPosition(m.getPos());
+        coin.shape.setFillColor(sf::Color(255, 215, 0));
+        worldItems.push_back(coin);
+    }
+    std::cout << "erase monsters\n";
     monsters.erase(
         std::remove_if(monsters.begin(), monsters.end(),
             [](const Monster& m) { return m.isDead(); }),
         monsters.end()
     );
+    std::cout << "update done\n";
 }
 
 
@@ -227,7 +234,7 @@ void Dungeon::spawnMonsters() {
             spawn.tilePos.x * (float)MapGenerator::TILE_SIZE + MapGenerator::TILE_SIZE / 2.f,
             spawn.tilePos.y * (float)MapGenerator::TILE_SIZE + MapGenerator::TILE_SIZE / 2.f
         };
-    monsters.emplace_back(pos, spawn.type, currentFloor, font);
+        monsters.emplace_back(pos, spawn.type, currentFloor, font);
     }
 }
 void Dungeon::handleAttack() {

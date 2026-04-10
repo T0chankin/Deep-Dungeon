@@ -217,38 +217,38 @@ void MapGenerator::draw(sf::RenderWindow& window) {
                 tile.setFillColor(sf::Color(40, 40, 60));
                 window.draw(tile);
             } else {
-                // Пол, люк, спавн — рисуем текстуру или цвет
-                if (hasFloorTexture) {
+                // Пол
+                if (hasFloorTexture && floorSprite) {
                     floorSprite->setPosition(pos);
-                    floorSprite->setTextureRect(sf::IntRect(
-                        {0, 0},
-                        {TILE_SIZE, TILE_SIZE}
-                    ));
+                    floorSprite->setTextureRect(sf::IntRect({0,0},{TILE_SIZE,TILE_SIZE}));
                     window.draw(*floorSprite);
                 } else {
                     tile.setPosition(pos);
-                    tile.setFillColor(getTileColor(t));
+                    tile.setFillColor(sf::Color(100, 90, 80));
                     window.draw(tile);
                 }
+
+                // Люк — только один раз
                 if (t == Tile::Hatch) {
-                    if (hasHatchTexture) {
+                    if (hasHatchTexture && hatchSprite) {
                         hatchSprite->setPosition({
                             x * (float)TILE_SIZE + TILE_SIZE / 2.f,
                             y * (float)TILE_SIZE + TILE_SIZE / 2.f
                         });
                         window.draw(*hatchSprite);
                     } else {
+                        tile.setSize({(float)TILE_SIZE - 1.f, (float)TILE_SIZE - 1.f});
                         tile.setFillColor(sf::Color(0, 200, 200));
                         tile.setPosition(pos);
                         window.draw(tile);
                     }
                 }
 
-                // Поверх текстуры рисуем люк и спавн
-                if (t == Tile::Hatch || t == Tile::Spawn) {
+                // Спавн
+                if (t == Tile::Spawn) {
                     tile.setSize({(float)TILE_SIZE - 1.f, (float)TILE_SIZE - 1.f});
+                    tile.setFillColor(sf::Color(0, 200, 0));
                     tile.setPosition(pos);
-                    tile.setFillColor(getTileColor(t));
                     window.draw(tile);
                 }
             }

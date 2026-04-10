@@ -1,27 +1,23 @@
 #include "audioManager.hpp"
 #include <iostream>
 
-// Загружаем буфер и сразу привязываем к sound
-bool AudioManager::loadSound(sf::SoundBuffer& buffer, sf::Sound& sound,
+void AudioManager::loadSound(sf::SoundBuffer& buffer,
+                              std::unique_ptr<sf::Sound>& sound,
                               const std::string& path)
 {
     if (!buffer.loadFromFile(path)) {
         std::cout << "Звук не найден: " << path << "\n";
-        return false;
+        return;
     }
-    sound.setBuffer(buffer);
-    return true;
+    // Создаём Sound только после успешной загрузки буфера
+    sound = std::make_unique<sf::Sound>(buffer);
 }
 
-AudioManager::AudioManager()
-    : hoverSound(hoverBuffer),
-      pickupSound(pickupBuffer),
-      healSound(healBuffer),
-      swordSound(swordBuffer),
-      bowSound(bowBuffer),
-      fireballSound(fireballBuffer),
-      monsterAttackSound(monsterAttackBuffer)
-{
+void AudioManager::playSound(std::unique_ptr<sf::Sound>& sound) {
+    if (sound) sound->play();
+}
+
+AudioManager::AudioManager() {
     loadSound(hoverBuffer,         hoverSound,         "assets/sounds/selectSound.wav");
     loadSound(pickupBuffer,        pickupSound,        "assets/sounds/pickup.mp3");
     loadSound(healBuffer,          healSound,          "assets/sounds/heal.mp3");
@@ -45,28 +41,17 @@ AudioManager::AudioManager()
     }
 }
 
-void AudioManager::playHover()         { hoverSound.play(); }
-void AudioManager::playPickup()        { pickupSound.play(); }
-void AudioManager::playHeal()          { healSound.play(); }
-void AudioManager::playSword()         { swordSound.play(); }
-void AudioManager::playBow()           { bowSound.play(); }
-void AudioManager::playFireball()      { fireballSound.play(); }
-void AudioManager::playMonsterAttack() { monsterAttackSound.play(); }
+void AudioManager::playHover()         { playSound(hoverSound); }
+void AudioManager::playPickup()        { playSound(pickupSound); }
+void AudioManager::playHeal()          { playSound(healSound); }
+void AudioManager::playSword()         { playSound(swordSound); }
+void AudioManager::playBow()           { playSound(bowSound); }
+void AudioManager::playFireball()      { playSound(fireballSound); }
+void AudioManager::playMonsterAttack() { playSound(monsterAttackSound); }
 
-void AudioManager::playMenuMusic() {
-    gameMusic.stop();
-    menuMusic.play();
-}
-
-void AudioManager::playGameMusic() {
-    menuMusic.stop();
-    gameMusic.play();
-}
-
-void AudioManager::stopMusic() {
-    menuMusic.stop();
-    gameMusic.stop();
-}
+void AudioManager::playMenuMusic() { gameMusic.stop(); menuMusic.play(); }
+void AudioManager::playGameMusic() { menuMusic.stop(); gameMusic.play(); }
+void AudioManager::stopMusic()     { menuMusic.stop(); gameMusic.stop(); }
 
 void AudioManager::setMusicVolume(float vol) {
     musicVolume = vol;
@@ -76,11 +61,11 @@ void AudioManager::setMusicVolume(float vol) {
 
 void AudioManager::setSoundVolume(float vol) {
     soundVolume = vol;
-    hoverSound.setVolume(vol);
-    pickupSound.setVolume(vol);
-    healSound.setVolume(vol);
-    swordSound.setVolume(vol);
-    bowSound.setVolume(vol);
-    fireballSound.setVolume(vol);
-    monsterAttackSound.setVolume(vol);
+    if (hoverSound)         hoverSound->setVolume(vol);
+    if (pickupSound)        pickupSound->setVolume(vol);
+    if (healSound)          healSound->setVolume(vol);
+    if (swordSound)         swordSound->setVolume(vol);
+    if (bowSound)           bowSound->setVolume(vol);
+    if (fireballSound)      fireballSound->setVolume(vol);
+    if (monsterAttackSound) monsterAttackSound->setVolume(vol);
 }
